@@ -8,6 +8,9 @@ This Blender plugin generates Vertex Animation Textures (VAT) from animated mesh
 3. Click **Install from Disk...** and select the `VAT.py` file.
 4. Enable the addon in the list.
 
+## Features
+//TODO
+
 ## Supported Modifiers
 
 The following Blender modifiers are supported by the VAT addon:
@@ -54,3 +57,8 @@ For `PARTICLE_SYSTEM`, it is recommended to set both the Emission Frame Start an
 | `positions`   | Vertex position animation texture.                                      | If `Normalize` is **false**: export as **OpenEXR**, `Color` `RGB`, `Color Depth` `Half` or `Full`, `Non-Color` | <img width="200" alt="image" src="https://github.com/user-attachments/assets/54134b64-8436-440f-ad69-8ec01a882b07" /> |
 |               |                                                                         | If `Normalize` is **true**: export as **PNG**, same settings as above                                          | <img width="193" alt="image" src="https://github.com/user-attachments/assets/d2aa6067-f177-4387-acf0-9af945ceaf3f" /> |
 | `normals`     | Vertex normal animation texture.                                        | **PNG** or other supported formats                                                                             | <img width="193" alt="image" src="https://github.com/user-attachments/assets/d2aa6067-f177-4387-acf0-9af945ceaf3f" /> |
+
+## Usage for threejs
+//TODO
+
+Blender uses Z as the up axis, while in Three.js the up axis is Y. Therefore, when sampling the position texture in GLSL, you should use `texturePos.xzy` to correctly map the axes.
