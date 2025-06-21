@@ -21,7 +21,7 @@
 
 bl_info = {
     "name": "VAT",
-    "author": "Joshua Bogart",
+    "author": "Joshua Bogart and Clément Renou",
     "version": (1, 0),
     "blender": (4, 0, 1),
     "location": "View3D > Sidebar > VAT Tab",
@@ -93,6 +93,8 @@ def create_export_mesh_object(context, data, me, size):
                 v = (loop.vertex_index // width) / num_wraps
             else:
                 v = (loop.vertex_index // width) / height * size[1]
+            if context.scene.flip_y:
+                v = 1.0 - v - 1.0 / num_wraps
             uv_layer.data[loop.index].uv = (u, v)       
     else:
         for loop in me.loops:
@@ -120,7 +122,7 @@ def get_vertex_data(context, data, meshes):
             normals.extend(((x + 1) * 0.5, (-y + 1) * 0.5, (z + 1) * 0.5, 1))
         if not me.users:
             data.meshes.remove(me)
-    
+
     return offsets, normals
 
 
@@ -134,7 +136,7 @@ def normalize(value, min_value, max_value):
 
 
 def bake_vertex_data(context, self, data, offsets, normals, size):
-    """Stores vertex offsets and normals in seperate image textures"""
+    """Stores vertex offsets and normals in separate image textures"""
     width, height = size
     if context.scene.wrap_mode != 'NONE':
         optimal_width, optimal_height, num_wraps = calculate_optimal_vat_resolution(width, height)
@@ -150,7 +152,7 @@ def bake_vertex_data(context, self, data, offsets, normals, size):
         texture_height = height
 
     offset_texture = data.images.new(
-        name="offsets" if context.scene.position_mode == 'OFFSETS' else "positions",
+        name="positions",
         width=texture_width,
         height=texture_height,
         alpha=False,
@@ -168,10 +170,6 @@ def bake_vertex_data(context, self, data, offsets, normals, size):
         max_offset = max(offsets)
         context.scene['min_offset'] = min_offset
         context.scene['max_offset'] = max_offset
-        # self.report(
-        #     {'WARNING'},
-        #     f"Normalized values: multiply ({max_offset} - {min_offset}) + {min_offset} (Min offset: {min_offset}, Max offset: {max_offset})"
-        # )
         offsets = [normalize(v, min_offset, max_offset) for v in offsets]
 
     if context.scene.wrap_mode != 'NONE':
@@ -196,7 +194,6 @@ def bake_vertex_data(context, self, data, offsets, normals, size):
                 new_offsets.extend(offsets[lineSample:lineSample+optimal_width_pixels])
                 new_normals.extend(normals[lineSample:lineSample+optimal_width_pixels])
                 
-        
         if context.scene.wrap_mode == 'WRAP':
             new_offsets.extend([0,0,0,1] * int(optimal_width * optimal_height - len(new_offsets)/4))
             new_normals.extend([0,0,0,1] * int(optimal_width * optimal_height - len(new_normals)/4))
@@ -210,9 +207,21 @@ def bake_vertex_data(context, self, data, offsets, normals, size):
     offsets.extend([0,0,0,0] * (texture_width * texture_height - len(offsets) // 4))
     normals.extend([0,0,0,0] * (texture_width * texture_height - len(normals) // 4))
    
-    offset_texture.pixels = offsets
-    normal_texture.pixels = normals
-    
+    # Flip Y textures
+    def flip_y(texture, width, height):
+        flipped = [0] * len(texture)
+        row_size = width * 4
+        for y in range(height):
+            for x in range(row_size):
+                flipped[(height - y - 1) * row_size + x] = texture[y * row_size + x]
+        return flipped
+
+    if context.scene.flip_y:
+        offset_texture.pixels = flip_y(offsets, texture_width, texture_height)
+        normal_texture.pixels = flip_y(normals, texture_width, texture_height)
+    else:
+        offset_texture.pixels = offsets
+        normal_texture.pixels = normals
 def is_simulation_baked(ob, mod_type):
     for mod in ob.modifiers:
         if mod.type == mod_type and mod.point_cache.is_baked:
@@ -255,8 +264,8 @@ class OBJECT_OT_ProcessAnimMeshes(bpy.types.Operator):
                         f"Objects with {mod.type.title()} modifiers are not allowed!"
                     )
                     return {'CANCELLED'}
-                
-         
+
+
         if vertex_count > 8192:
             self.report(
                 {'WARNING'},
@@ -281,7 +290,7 @@ class OBJECT_OT_ProcessAnimMeshes(bpy.types.Operator):
                 f"Particle system for object {ob.name} is not baked!"
             )
             return {'CANCELLED'}
-        
+
         meshes = get_per_frame_mesh_data(context, data, objects)
         export_mesh_data = meshes[0].copy()
         self.report(
@@ -292,7 +301,7 @@ class OBJECT_OT_ProcessAnimMeshes(bpy.types.Operator):
         create_export_mesh_object(context, data, export_mesh_data, texture_size)
         offsets, normals = get_vertex_data(context, data, meshes)
         bake_vertex_data(context, self, data, offsets, normals, texture_size)
-        
+
         return {'FINISHED'}
 
 
@@ -324,6 +333,7 @@ class VIEW3D_PT_VertexAnimation(bpy.types.Panel):
         col.prop(scene, "frame_end", text="End")
         col.prop(scene, "frame_step", text="Step")
         col.prop(scene, "position_mode", text="Position Mode")
+        col.prop(scene, "flip_y", text="Flip Y")
         col.prop(scene, "normalize", text="Normalize (useful for png)")
         if scene.normalize and scene.get('min_offset') and scene.get('max_offset'):
             col.label(text=f"Min Offset: {scene.min_offset:.4f}")
@@ -353,6 +363,11 @@ def register():
             ('ABSOLUTES', "Absolutes", "Use absolutes")
         ],
         default='OFFSETS'
+    )
+    bpy.types.Scene.flip_y = bpy.props.BoolProperty(
+        name="Flip Y",
+        description="Flip Y",
+        default=True
     )
     bpy.types.Scene.normalize = bpy.props.BoolProperty(
         name="Normalize",
@@ -387,6 +402,7 @@ def unregister():
     bpy.utils.unregister_class(VIEW3D_PT_VertexAnimation)
     del bpy.types.Scene.position_mode
     del bpy.types.Scene.normalize
+    del bpy.types.Scene.flip_y
     del bpy.types.Scene.min_offset
     del bpy.types.Scene.max_offset
     del bpy.types.Scene.wrap_mode
