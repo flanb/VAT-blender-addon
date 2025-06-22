@@ -2,6 +2,15 @@
 
 This Blender plugin generates Vertex Animation Textures (VAT) from animated meshes. It is designed to simplify the export of complex animations to Three.js or other, using textures to store vertex movements.
 
+https://github.com/user-attachments/assets/d6cb6784-91e4-4301-9c35-654e35ded644
+
+## Concept 
+The Vertex Animation Texture (VAT) technique captures the movement of an animated mesh and encodes it into textures. Each pixel in the texture represents the position of a vertex at a specific frame of the animation.
+
+In the generated texture, the vertical axis (top to bottom) corresponds to animation frames, and the horizontal axis (left to right) corresponds to the mesh vertices.
+
+In a real-time engine (such as Three.js), the static mesh is imported along with its animation textures. A shader reads these textures frame by frame to move the vertices, thus reproducing the original animation without the need for an armature or complex calculations on the engine side. This method allows exporting complex animations, including those from physics simulations or modifiers, while optimizing rendering performance.
+
 ## Installation
 1. Download `VAT.py`.
 2. In Blender, go to **Edit > Preferences > Add-ons**.
@@ -9,7 +18,13 @@ This Blender plugin generates Vertex Animation Textures (VAT) from animated mesh
 4. Enable the addon in the list.
 
 ## Features
-//TODO
+<img width="212" alt="image" src="https://github.com/user-attachments/assets/e87f4660-a24a-4736-93cc-e8a24769317e" />
+- Step 
+- Position mode offsets or absolute.
+- Y-flip 
+- Normalize position
+- Wrap mode (none, wrap, wrap and crop)
+
 
 ## Supported Modifiers
 
