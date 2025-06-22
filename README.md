@@ -4,7 +4,7 @@ This Blender plugin generates Vertex Animation Textures (VAT) from animated mesh
 
 https://github.com/user-attachments/assets/666ab17b-4e5b-4865-9454-8af4ba9a6aa2
 
-## Concept 
+## Concept
 The Vertex Animation Texture (VAT) technique captures the movement of an animated mesh and encodes it into textures. Each pixel in the texture represents the position of a vertex at a specific frame of the animation.
 
 In the generated texture, the vertical axis (top to bottom) corresponds to animation frames, and the horizontal axis (left to right) corresponds to the mesh vertices.
@@ -18,13 +18,17 @@ In a real-time engine (such as Three.js), the static mesh is imported along with
 4. Enable the addon in the list.
 
 ## Features
-<img width="212" alt="image" src="https://github.com/user-attachments/assets/e87f4660-a24a-4736-93cc-e8a24769317e" />
-- Step 
-- Position mode offsets or absolute.
-- Y-flip 
-- Normalize position
-- Wrap mode (none, wrap, wrap and crop)
 
+![image](https://github.com/user-attachments/assets/e87f4660-a24a-4736-93cc-e8a24769317e)
+
+| Feature            | Description                                                                                                                                                                                                                                                                                                                                                 | Image                                                                                     |
+|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| Infos              | Displays information about the export: the name of the object to be encoded, the number of vertices (which determines the width), and the number of frames (which determines the height). In the example shown, the texture will be 144x30.                                                                                                                 | ![image](https://github.com/user-attachments/assets/230818ee-c749-4b1d-9b6d-404f8d302aae) |
+| Step               | Choose the frame step for baking (e.g., every frame, every 2 frames, etc.). This allows you to reduce the number of frames and thus obtain a smaller texture. Since positions are encoded in a texture, linear filter can be used to smooth the pixels (and therefore the positions).                                                                       |                                                                                           |
+| Position mode      | Export positions as offsets or absolute values. If set to "offset", the positions are stored relative to the object's initial position. If set to "absolute", the positions are stored in world space, starting from the world origin (0,0,0).                                                                                                              |                                                                                           |
+| Y-flip             | Flip the Y axis in the exported textures if needed.                                                                                                                                                                                                                                                                                                         |                                                                                           |
+| Normalize position | Normalize vertex positions to fit within a 0-1 range. This option is required if you want to export the animation texture as PNG, since PNG cannot encode negative values. At the end of the export, a "Min Offset" and a "Max Offset" are displayed to map values: 0 = Min Offset and 1 = Max Offset.                                                      | ![image](https://github.com/user-attachments/assets/0763a6b2-0844-4098-a157-808a1842ecfa) |
+| Wrap mode          | Controls the layout of the animation texture. **None**: the texture is a single long strip (not optimal for GPUs). **Wrap**: positions are wrapped to new rows, making the texture more GPU-friendly (closer to a square or rectangle). **Wrap and crop**: like Wrap, but the texture is cropped to remove any empty space, resulting in a compact texture. | ![image](https://github.com/user-attachments/assets/6732e957-c689-455b-8aa1-8b24274ec93d) |
 
 ## Supported Modifiers
 
@@ -66,12 +70,12 @@ For `PARTICLE_SYSTEM`, it is recommended to set both the Emission Frame Start an
 5. Start the VAT texture generation.
 6. The plugin will generate a new mesh `export_mesh` with a new uv set `vertex_anim`, and textures `positions` and `normals`.
 
-| Output        | Description                                                             | Export Format & Settings                                                                                       | Example Image                                                                                                         |
-|---------------|-------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| `export_mesh` | Mesh with new UV set `vertex_anim`. Can be exported for use in engines. | .glb or other mesh formats                                                                                     | <img width="157" alt="image" src="https://github.com/user-attachments/assets/aa5efc2a-5393-4b7b-86cd-af817c323b1e" /> |
-| `positions`   | Vertex position animation texture.                                      | If `Normalize` is **false**: export as **OpenEXR**, `Color` `RGB`, `Color Depth` `Half` or `Full`, `Non-Color` | <img width="200" alt="image" src="https://github.com/user-attachments/assets/54134b64-8436-440f-ad69-8ec01a882b07" /> |
-|               |                                                                         | If `Normalize` is **true**: export as **PNG**, same settings as above                                          | <img width="193" alt="image" src="https://github.com/user-attachments/assets/d2aa6067-f177-4387-acf0-9af945ceaf3f" /> |
-| `normals`     | Vertex normal animation texture.                                        | **PNG** or other supported formats                                                                             | <img width="193" alt="image" src="https://github.com/user-attachments/assets/d2aa6067-f177-4387-acf0-9af945ceaf3f" /> |
+| Output        | Description                                                             | Export Format & Settings                                                                                       | Example Image                                                                             |
+|---------------|-------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| `export_mesh` | Mesh with new UV set `vertex_anim`. Can be exported for use in engines. | .glb or other mesh formats                                                                                     | ![image](https://github.com/user-attachments/assets/aa5efc2a-5393-4b7b-86cd-af817c323b1e) |
+| `positions`   | Vertex position animation texture.                                      | If `Normalize` is **false**: export as **OpenEXR**, `Color` `RGB`, `Color Depth` `Half` or `Full`, `Non-Color` | ![image](https://github.com/user-attachments/assets/54134b64-8436-440f-ad69-8ec01a882b07) |
+|               |                                                                         | If `Normalize` is **true**: export as **PNG**, same settings as above                                          | ![image](https://github.com/user-attachments/assets/d2aa6067-f177-4387-acf0-9af945ceaf3f) |
+| `normals`     | Vertex normal animation texture.                                        | **PNG** or other supported formats                                                                             | ![image](https://github.com/user-attachments/assets/d2aa6067-f177-4387-acf0-9af945ceaf3f) |
 
 ## Usage for threejs
 //TODO
