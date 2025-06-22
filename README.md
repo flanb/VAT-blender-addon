@@ -70,7 +70,7 @@ For `PARTICLE_SYSTEM`, it is recommended to set both the Emission Frame Start an
 5. Start the VAT texture generation.
 6. The plugin will generate a new mesh `export_mesh` with a new uv set `vertex_anim`, and textures `positions` and `normals`.
 
-| Output        | Description                                                             | Export Format & Settings                                                                                       | Example Image                                                                             |
+| Output        | Description                                                             | Export Format & Settings                                                                                       |  Image                                                                                    |
 |---------------|-------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
 | `export_mesh` | Mesh with new UV set `vertex_anim`. Can be exported for use in engines. | .glb or other mesh formats                                                                                     | ![image](https://github.com/user-attachments/assets/aa5efc2a-5393-4b7b-86cd-af817c323b1e) |
 | `positions`   | Vertex position animation texture.                                      | If `Normalize` is **false**: export as **OpenEXR**, `Color` `RGB`, `Color Depth` `Half` or `Full`, `Non-Color` | ![image](https://github.com/user-attachments/assets/54134b64-8436-440f-ad69-8ec01a882b07) |
