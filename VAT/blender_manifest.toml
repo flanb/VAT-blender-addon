@@ -1,0 +1,18 @@
+schema_version = "1.0.0"
+
+id = "VAT"
+version = "1.0.0"
+name = "Vertex Animation Texture Addon (VAT)"
+tagline = "Tools for vertex animation textures in Blender"
+maintainer = "flanb"
+type = "add-on"
+website = "https://github.com/flanb/VAT-blender-addon"
+
+blender_version_min = "4.2.0"
+
+license = [
+    "SPDX:GPL-3.0-or-later",
+]
+copyright = [
+    "2025 flanb",
+]
