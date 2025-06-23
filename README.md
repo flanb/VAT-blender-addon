@@ -63,8 +63,8 @@ For `PARTICLE_SYSTEM`, it is recommended to set both the Emission Frame Start an
 ## Usage
 1. Select an animated object in your Blender scene.
 2. Bake the animation:
-    - Go to the **Cache** section in the modifier panel.
-    - Click **Bake All Dynamics** to bake the animation.
+   - Go to the **Cache** section in the modifier panel.
+   - Click **Bake All Dynamics** to bake the animation.
 3. Access the addon panel (On the right near "Item" or "Tool" tab).
 4. Configure the desired options (wrap mode, Y-flip, etc.).
 5. Start the VAT texture generation.
@@ -78,6 +78,32 @@ For `PARTICLE_SYSTEM`, it is recommended to set both the Emission Frame Start an
 | `normals`     | Vertex normal animation texture.                                        | **PNG** or other supported formats                                                                             | ![image](https://github.com/user-attachments/assets/d2aa6067-f177-4387-acf0-9af945ceaf3f) |
 
 ## Usage for threejs
-//TODO
-
 Blender uses Z as the up axis, while in Three.js the up axis is Y. Therefore, when sampling the position texture in GLSL, you should use `texturePos.xzy` to correctly map the axes.
+```glsl
+// vertexShader.glsl
+attribute vec2 uv1; // define uv1 attribute for vertex_anim uv set
+uniform sampler2D posTexture; // positions.exr or positions.png
+uniform sampler2D normalTexture; // normals.png
+
+uniform float uTime; // time in seconds
+uniform float totalFrames;
+uniform float fps; 
+
+varying vec3 vNormal;
+
+void main() {
+	// calculate uv coordinates
+	float frame = mod(uTime * fps, totalFrames) / totalFrames;
+
+	// get the position from the texture
+	vec4 texturePos = texture(posTexture, vec2(uv1.x, uv1.y - frame));
+   
+    // get the normal from the texture
+	vec4 textureNormal = texture(normalTexture, vec2(uv1.x, uv1.y - frame)) * 2.0 - 1.0;
+	vNormal = textureNormal.xzy;
+
+	// translate the position
+	vec4 translated = vec4(position + texturePos.xzy, 1.0);
+	gl_Position = projectionMatrix * modelViewMatrix * translated;
+}
+```
