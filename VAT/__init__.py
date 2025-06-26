@@ -22,8 +22,8 @@
 bl_info = {
     "name": "VAT",
     "author": "Joshua Bogart and Clément Renou",
-    "version": (1, 0),
-    "blender": (4, 0, 1),
+    "version": (1, 0, 1),
+    "blender": (4, 2, 0),
     "location": "View3D > Sidebar > VAT Tab",
     "description": "A tool for storing per frame vertex data for use in a vertex shader.",
     "warning": "",
@@ -75,25 +75,26 @@ def calculate_optimal_vat_resolution(num_vertices, num_frames):
 
     num_wraps = math.ceil(num_vertices / width)
 
-    return (width, height, num_wraps)
+    return width, height, num_wraps
 
 def create_export_mesh_object(context, data, me, size):
     """Return a mesh object with correct UVs"""
-    if context.scene.wrap_mode != 'NONE':
+    vat = context.scene.vat_settings
+    if vat.wrap_mode != 'NONE':
         width, height, num_wraps = calculate_optimal_vat_resolution(size[0], size[1])
 
     while len(me.uv_layers) < 2:
         me.uv_layers.new()
     uv_layer = me.uv_layers[1]
     uv_layer.name = "vertex_anim"
-    if context.scene.wrap_mode != 'NONE':
+    if vat.wrap_mode != 'NONE':
         for loop in me.loops:
             u = (loop.vertex_index % width + 0.5) / width
-            if context.scene.wrap_mode == 'WRAP_CROP':
+            if vat.wrap_mode == 'WRAP_CROP':
                 v = (loop.vertex_index // width) / num_wraps
             else:
                 v = (loop.vertex_index // width) / height * size[1]
-            if context.scene.flip_y:
+            if vat.flip_y:
                 v = 1.0 - v - 1.0 / num_wraps
             uv_layer.data[loop.index].uv = (u, v)
     else:
@@ -107,12 +108,13 @@ def create_export_mesh_object(context, data, me, size):
 
 def get_vertex_data(context, data, meshes):
     """Return lists of vertex offsets and normals from a list of mesh data"""
+    vat = context.scene.vat_settings
     original = meshes[0].vertices
     offsets = []
     normals = []
     for me in reversed(meshes):
         for v in me.vertices:
-            if context.scene.position_mode == 'OFFSETS':
+            if vat.position_mode == 'OFFSETS':
                 offset = v.co - original[v.index].co
             else:
                 offset = v.co
@@ -122,7 +124,6 @@ def get_vertex_data(context, data, meshes):
             normals.extend(((x + 1) * 0.5, (-y + 1) * 0.5, (z + 1) * 0.5, 1))
         if not me.users:
             data.meshes.remove(me)
-
     return offsets, normals
 
 
@@ -137,16 +138,17 @@ def normalize(value, min_value, max_value):
 
 def bake_vertex_data(context, self, data, offsets, normals, size):
     """Stores vertex offsets and normals in separate image textures"""
+    vat = context.scene.vat_settings
     width, height = size
-    if context.scene.wrap_mode != 'NONE':
+    if vat.wrap_mode != 'NONE':
         optimal_width, optimal_height, num_wraps = calculate_optimal_vat_resolution(width, height)
         texture_width = optimal_width
     else:
         texture_width = width
 
-    if context.scene.wrap_mode == 'WRAP':
+    if vat.wrap_mode == 'WRAP':
         texture_height = optimal_height
-    elif context.scene.wrap_mode == 'WRAP_CROP':
+    elif vat.wrap_mode == 'WRAP_CROP':
         texture_height = height * num_wraps
     else:
         texture_height = height
@@ -165,14 +167,14 @@ def bake_vertex_data(context, self, data, offsets, normals, size):
         alpha=False
     )
 
-    if context.scene.normalize:
+    if vat.normalize:
         min_offset = min(offsets)
         max_offset = max(offsets)
         context.scene['min_offset'] = min_offset
         context.scene['max_offset'] = max_offset
         offsets = [normalize(v, min_offset, max_offset) for v in offsets]
 
-    if context.scene.wrap_mode != 'NONE':
+    if vat.wrap_mode != 'NONE':
         new_offsets = []
         new_normals = []
         optimal_width_pixels = optimal_width * 4
@@ -194,7 +196,7 @@ def bake_vertex_data(context, self, data, offsets, normals, size):
                 new_offsets.extend(offsets[lineSample:lineSample+optimal_width_pixels])
                 new_normals.extend(normals[lineSample:lineSample+optimal_width_pixels])
 
-        if context.scene.wrap_mode == 'WRAP':
+        if vat.wrap_mode == 'WRAP':
             new_offsets.extend([0,0,0,1] * int(optimal_width * optimal_height - len(new_offsets)/4))
             new_normals.extend([0,0,0,1] * int(optimal_width * optimal_height - len(new_normals)/4))
         else:
@@ -216,7 +218,7 @@ def bake_vertex_data(context, self, data, offsets, normals, size):
                 flipped[(height - y - 1) * row_size + x] = texture[y * row_size + x]
         return flipped
 
-    if context.scene.flip_y:
+    if vat.flip_y:
         offset_texture.pixels = flip_y(offsets, texture_width, texture_height)
         normal_texture.pixels = flip_y(normals, texture_width, texture_height)
     else:
@@ -332,17 +334,17 @@ class VIEW3D_PT_VertexAnimation(bpy.types.Panel):
         col.prop(scene, "frame_start", text="Frame Start")
         col.prop(scene, "frame_end", text="End")
         col.prop(scene, "frame_step", text="Step")
-        col.prop(scene, "position_mode", text="Position Mode")
-        col.prop(scene, "flip_y", text="Flip Y")
-        col.prop(scene, "normalize", text="Normalize (useful for png)")
-        if scene.normalize and scene.get('min_offset') and scene.get('max_offset'):
+        col.prop(scene.vat_settings, "position_mode", text="Position Mode")
+        col.prop(scene.vat_settings, "flip_y", text="Flip Y")
+        col.prop(scene.vat_settings, "normalize", text="Normalize (useful for png)")
+        if scene.vat_settings.normalize and scene.get('min_offset') and scene.get('max_offset'):
             col.label(text=f"Min Offset: {scene.min_offset:.4f}")
             col.label(text=f"Max Offset: {scene.max_offset:.4f}")
-        col.prop(scene, "wrap_mode", text="Wrap Mode")
-        if scene.wrap_mode != 'NONE':
+        col.prop(scene.vat_settings, "wrap_mode", text="Wrap Mode")
+        if scene.vat_settings.wrap_mode != 'NONE':
             optimal_width, optimal_height, num_wraps = calculate_optimal_vat_resolution(len(obj.data.vertices), len(frame_range(scene)))
             y_percent_used = len(frame_range(scene)) * num_wraps / optimal_height
-            if scene.wrap_mode == 'WRAP':
+            if scene.vat_settings.wrap_mode == 'WRAP':
                 col.label(text=f"Output Size: {optimal_width} x {optimal_height}")
                 col.label(text=f"Y Used: {y_percent_used}")
             else:
@@ -352,10 +354,8 @@ class VIEW3D_PT_VertexAnimation(bpy.types.Panel):
         row.operator("object.process_anim_meshes")
 
 
-def register():
-    bpy.utils.register_class(OBJECT_OT_ProcessAnimMeshes)
-    bpy.utils.register_class(VIEW3D_PT_VertexAnimation)
-    bpy.types.Scene.position_mode = bpy.props.EnumProperty(
+class VATSettings(bpy.types.PropertyGroup):
+    position_mode: bpy.props.EnumProperty(
         name="Position Mode",
         description="Choose between offsets positions or absolutes positions",
         items=[
@@ -364,27 +364,27 @@ def register():
         ],
         default='OFFSETS'
     )
-    bpy.types.Scene.flip_y = bpy.props.BoolProperty(
+    flip_y: bpy.props.BoolProperty(
         name="Flip Y",
         description="Flip Y",
         default=True
     )
-    bpy.types.Scene.normalize = bpy.props.BoolProperty(
+    normalize: bpy.props.BoolProperty(
         name="Normalize",
         description="Normalize vertex normals",
         default=False
     )
-    bpy.types.Scene.min_offset = bpy.props.FloatProperty(
+    min_offset: bpy.props.FloatProperty(
         name="Min Offset",
         description="Min offset value",
         default=0
     )
-    bpy.types.Scene.max_offset = bpy.props.FloatProperty(
+    max_offset: bpy.props.FloatProperty(
         name="Max Offset",
         description="Max offset value",
         default=0
     )
-    bpy.types.Scene.wrap_mode = bpy.props.EnumProperty(
+    wrap_mode: bpy.props.EnumProperty(
         name="Wrap Mode",
         description="Wrap texture mode",
         items=[
@@ -396,16 +396,18 @@ def register():
     )
 
 
+def register():
+    bpy.utils.register_class(VATSettings)
+    bpy.utils.register_class(OBJECT_OT_ProcessAnimMeshes)
+    bpy.utils.register_class(VIEW3D_PT_VertexAnimation)
+    bpy.types.Scene.vat_settings = bpy.props.PointerProperty(type=VATSettings)
+
 
 def unregister():
-    bpy.utils.unregister_class(OBJECT_OT_ProcessAnimMeshes)
+    del bpy.types.Scene.vat_settings
     bpy.utils.unregister_class(VIEW3D_PT_VertexAnimation)
-    del bpy.types.Scene.position_mode
-    del bpy.types.Scene.normalize
-    del bpy.types.Scene.flip_y
-    del bpy.types.Scene.min_offset
-    del bpy.types.Scene.max_offset
-    del bpy.types.Scene.wrap_mode
+    bpy.utils.unregister_class(OBJECT_OT_ProcessAnimMeshes)
+    bpy.utils.unregister_class(VATSettings)
 
 
 if __name__ == "__main__":
